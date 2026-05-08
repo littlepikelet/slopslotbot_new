@@ -9,7 +9,7 @@ from aiogram.enums import DiceEmoji, ParseMode
 from aiogram.exceptions import TelegramBadRequest
 import aiosqlite
 
-BOT_TOKEN = os.getenv("8635076570:AAEX117e8gOj8z5Eh97TXPmaF-APOmBeamQ")
+BOT_TOKEN = "8635076570:AAEX117e8gOj8z5Eh97TXPmaF-APOmBeamQ"
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN не задан в переменных окружения")
 
