@@ -35,24 +35,24 @@ async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
+                user_id INTEGER,
+                chat_id INTEGER,
                 balance INTEGER DEFAULT 0,
                 free_attempts INTEGER DEFAULT 3,
                 last_date TEXT,
                 win_streak INTEGER DEFAULT 0,
                 total_wins INTEGER DEFAULT 0,
-                total_games INTEGER DEFAULT 0
+                total_games INTEGER DEFAULT 0,
+                PRIMARY KEY (user_id, chat_id)
             )
         """)
         await db.commit()
-
 # работа с БД
-async def get_user(user_id: int) -> dict:
-    """Возвращает запись пользователя"""
+async def get_user(user_id: int, chat_id: int) -> dict:
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute(
-            "SELECT balance, free_attempts, last_date, win_streak, total_wins, total_games FROM users WHERE user_id = ?",
-            (user_id,)
+            "SELECT balance, free_attempts, last_date, win_streak, total_wins, total_games FROM users WHERE user_id = ? AND chat_id = ?",
+            (user_id, chat_id)
         ) as cursor:
             row = await cursor.fetchone()
             if row:
@@ -67,8 +67,8 @@ async def get_user(user_id: int) -> dict:
             else:
                 today_ufa = datetime.now(TIMEZONE).strftime("%Y-%m-%d")
                 await db.execute(
-                    "INSERT INTO users (user_id, balance, free_attempts, last_date) VALUES (?, ?, ?, ?)",
-                    (user_id, DAILY_BONUS, FREE_ATTEMPTS_DAILY, today_ufa)
+                    "INSERT INTO users (user_id, chat_id, balance, free_attempts, last_date) VALUES (?, ?, ?, ?, ?)",
+                    (user_id, chat_id, DAILY_BONUS, FREE_ATTEMPTS_DAILY, today_ufa)
                 )
                 await db.commit()
                 return {
@@ -80,11 +80,9 @@ async def get_user(user_id: int) -> dict:
                     "total_games": 0,
                 }
 
-async def update_user_day(user_id: int, user_data: dict) -> dict:
-    """Проверка смены дня (по Уфе)."""
+async def update_user_day(user_id: int, chat_id: int, user_data: dict) -> dict:
     today_ufa = datetime.now(TIMEZONE).strftime("%Y-%m-%d")
     if user_data["last_date"] != today_ufa:
-        # Новый день: сброс бесплатных попыток
         new_free = FREE_ATTEMPTS_DAILY
         new_balance = user_data["balance"] + DAILY_BONUS
         user_data["free_attempts"] = new_free
@@ -92,23 +90,19 @@ async def update_user_day(user_id: int, user_data: dict) -> dict:
         user_data["last_date"] = today_ufa
         async with aiosqlite.connect(DB_NAME) as db:
             await db.execute(
-                "UPDATE users SET free_attempts = ?, balance = ?, last_date = ? WHERE user_id = ?",
-                (new_free, new_balance, today_ufa, user_id)
+                "UPDATE users SET free_attempts = ?, balance = ?, last_date = ? WHERE user_id = ? AND chat_id = ?",
+                (new_free, new_balance, today_ufa, user_id, chat_id)
             )
             await db.commit()
     return user_data
 
-async def deduct_attempt(user_id: int, user_data: dict) -> Tuple[bool, dict]:
-    """
-    Списывает одну попытку
-    Возвращает (успех_списания, обновлённые_данные)
-    """
+async def deduct_attempt(user_id: int, chat_id: int, user_data: dict) -> Tuple[bool, dict]:
     if user_data["free_attempts"] > 0:
         user_data["free_attempts"] -= 1
         async with aiosqlite.connect(DB_NAME) as db:
             await db.execute(
-                "UPDATE users SET free_attempts = ? WHERE user_id = ?",
-                (user_data["free_attempts"], user_id)
+                "UPDATE users SET free_attempts = ? WHERE user_id = ? AND chat_id = ?",
+                (user_data["free_attempts"], user_id, chat_id)
             )
             await db.commit()
         return True, user_data
@@ -116,53 +110,46 @@ async def deduct_attempt(user_id: int, user_data: dict) -> Tuple[bool, dict]:
         user_data["balance"] -= 1
         async with aiosqlite.connect(DB_NAME) as db:
             await db.execute(
-                "UPDATE users SET balance = ? WHERE user_id = ?",
-                (user_data["balance"], user_id)
+                "UPDATE users SET balance = ? WHERE user_id = ? AND chat_id = ?",
+                (user_data["balance"], user_id, chat_id)
             )
             await db.commit()
         return True, user_data
     else:
         return False, user_data
 
-async def apply_win(user_id: int, user_data: dict, dice_value: int) -> Tuple[dict, int]:
-    """
-    Начисляет фишки за выигрыш, обновляет серию побед, возвращает кол-во фишек, списанные попытки
-    """
+async def apply_win(user_id: int, chat_id: int, user_data: dict, dice_value: int) -> Tuple[dict, int]:
     win_amount = WINNINGS.get(dice_value, 0)
     if win_amount > 0:
-        # Победа
         user_data["win_streak"] += 1
         user_data["balance"] += win_amount
         user_data["total_wins"] += 1
 
-        # Бонус за серию 3
         extra = 0
         if user_data["win_streak"] == 3:
             extra = STREAK_BONUS
             user_data["balance"] += extra
 
-        # Сохранение в БД
         async with aiosqlite.connect(DB_NAME) as db:
             await db.execute(
-                "UPDATE users SET win_streak = ?, balance = ?, total_wins = ? WHERE user_id = ?",
-                (user_data["win_streak"], user_data["balance"], user_data["total_wins"], user_id)
+                "UPDATE users SET win_streak = ?, balance = ?, total_wins = ? WHERE user_id = ? AND chat_id = ?",
+                (user_data["win_streak"], user_data["balance"], user_data["total_wins"], user_id, chat_id)
             )
             await db.commit()
         return user_data, win_amount + extra
     else:
-        # Проигрыш - сброс серии
         user_data["win_streak"] = 0
         async with aiosqlite.connect(DB_NAME) as db:
             await db.execute(
-                "UPDATE users SET win_streak = ? WHERE user_id = ?",
-                (0, user_id)
+                "UPDATE users SET win_streak = ? WHERE user_id = ? AND chat_id = ?",
+                (0, user_id, chat_id)
             )
             await db.commit()
         return user_data, 0
 
-async def update_total_games(user_id: int):
+async def update_total_games(user_id: int, chat_id: int):
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("UPDATE users SET total_games = total_games + 1 WHERE user_id = ?", (user_id,))
+        await db.execute("UPDATE users SET total_games = total_games + 1 WHERE user_id = ? AND chat_id = ?", (user_id, chat_id))
         await db.commit()
 
 #  КЛАВИАТУРА 
@@ -198,11 +185,11 @@ async def callback_spin(callback: types.CallbackQuery):
 
 async def spin_action(user_id: int, chat_id: int, source_message: types.Message, user_name: str = None):
     # Получаем и обновляем день
-    user = await get_user(user_id)
-    user = await update_user_day(user_id, user)
+    user = await get_user(user_id, chat_id)
+    user = await update_user_day(user_id, chat_id, user)
 
     # Пытаемся списать попытку
-    success, user = await deduct_attempt(user_id, user)
+    success, user = await deduct_attempt(user_id, chat_id, user)
     if not success:
         await source_message.answer(
             "❌ У тебя нет бесплатных попыток и нет фишек.\n"
@@ -216,10 +203,10 @@ async def spin_action(user_id: int, chat_id: int, source_message: types.Message,
     dice_value = sent_msg.dice.value
 
     # Обновление общего числа игр
-    await update_total_games(user_id)
+    await update_total_games(user_id, chat_id)
 
     # Определение выигрыша и начисление
-    user, won_fish = await apply_win(user_id, user, dice_value)
+    user, won_fish = await apply_win(user_id, chat_id, user, dice_value)
 
     # Формируем ответ
     if won_fish > 0:
@@ -264,6 +251,7 @@ async def show_stats(callback: types.CallbackQuery):
 async def remove_manual_slot(message: types.Message):
     # Если пользователь сам отправил эмодзи слота, проверим, есть ли у него попытки
     user_id = message.from_user.id
+    chat_id = message.chat.id
     user = await get_user(user_id)
     user = await update_user_day(user_id, user)
 
