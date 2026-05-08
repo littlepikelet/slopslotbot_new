@@ -194,7 +194,7 @@ async def callback_spin(callback: types.CallbackQuery):
     await spin_action(callback.from_user.id, callback.message.chat.id, callback.message)
     await callback.answer()
 
-async def spin_action(user_id: int, chat_id: int, source_message: types.Message):
+async def spin_action(user_id: int, chat_id: int, source_message: types.Message, user_name: str = None):
     # Получаем и обновляем день
     user = await get_user(user_id)
     user = await update_user_day(user_id, user)
@@ -221,9 +221,9 @@ async def spin_action(user_id: int, chat_id: int, source_message: types.Message)
 
     # Формируем ответ
     if won_fish > 0:
-        result_text = f"🎉 ПОБЕДА! +{won_fish} фишек!"
+        result_text = f"🎉 {user_name}, ПОБЕДА! +{won_fish} фишек!"
     else:
-        result_text = "😔 Проигрыш. Попробуй ещё."
+        result_text = f"😔 {user_name}, проигрыш. Попробуй ещё."
 
     streak_text = f"🔥 Серия побед: {user['win_streak']}" if user['win_streak'] > 0 else ""
 
@@ -237,14 +237,15 @@ async def spin_action(user_id: int, chat_id: int, source_message: types.Message)
 @dp.callback_query(lambda c: c.data == "stats")
 async def show_stats(callback: types.CallbackQuery):
     user_id = callback.from_user.id
+    user_name = callback.from_user.first_name  # <-- ДОБАВИТЬ ЭТУ СТРОКУ
     user = await get_user(user_id)
-    user = await update_user_day(user_id, user)  # обновим день, чтобы показать актуальные бесплатные попытки
+    user = await update_user_day(user_id, user)
 
     total_games = user["total_games"]
     win_rate = (user["total_wins"] / total_games * 100) if total_games > 0 else 0
 
     await callback.message.answer(
-        f"📊 <b>Твоя статистика</b>\n"
+        f"📊 <b>Статистика для {user_name}</b>\n"  # <-- ИЗМЕНИТЬ ЭТУ СТРОКУ
         f"🎰 Всего игр: {total_games}\n"
         f"🏆 Побед: {user['total_wins']}\n"
         f"⭐ Процент побед: {win_rate:.1f}%\n"
