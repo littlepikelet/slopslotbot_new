@@ -1,4 +1,4 @@
-# force rebuild v4
+# force rebuild v5
 import asyncio
 import os
 from datetime import datetime
@@ -227,7 +227,7 @@ async def spin_action(user_id: int, chat_id: int, source_message: types.Message,
 async def show_stats(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     user_name = callback.from_user.first_name  # <-- ДОБАВИТЬ ЭТУ СТРОКУ
-    user = await get_user(user_id)
+    user = await get_user(user_id, callback.message.chat.id)
     user = await update_user_day(user_id, user)
 
     total_games = user["total_games"]
@@ -252,7 +252,7 @@ async def remove_manual_slot(message: types.Message):
     # Если пользователь сам отправил эмодзи слота, проверим, есть ли у него попытки
     user_id = message.from_user.id
     chat_id = message.chat.id
-    user = await get_user(user_id)
+    user = await get_user(user_id, message.chat.id)
     user = await update_user_day(user_id, user)
 
     # Пытаемся списать попытку (если есть)
