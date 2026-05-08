@@ -1,4 +1,4 @@
-# force rebuild v10
+# force rebuild v11
 import asyncio
 import os
 from datetime import datetime
@@ -252,18 +252,28 @@ async def remove_manual_slot(message: types.Message):
     # Если пользователь сам отправил эмодзи слота, проверим, есть ли у него попытки
     user_id = message.from_user.id
     chat_id = message.chat.id
-    user = await get_user(user_id, message.chat.id)
+    chat_type = "личный чат" if chat_id > 0 else "группа"
+    
+    print(f"🔍 Получен dice от {user_id} в {chat_type} (chat_id={chat_id})")
+    print(f"   dice value: {message.dice.value}")
+    
+    user = await get_user(user_id, chat_id)
     user = await update_user_day(user_id, chat_id, user)
 
     # Пытаемся списать попытку (если есть)
     success, user = await deduct_attempt(user_id, chat_id, user)
+    
+    print(f"   Попытка списана: {success}, осталось попыток: {user['free_attempts']}, баланс: {user['balance']}")
+    
     if success:
         # Если списали удачно – обрабатываем как обычный спин
         # НО сообщение всё равно удалим, чтобы не засорять чат
         try:
-            await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-        except TelegramBadRequest:
-            pass
+            await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
+            print(f"✅ Сообщение {message.message_id} УСПЕШНО удалено в {chat_type}")
+        except Exception as e:
+            print(f"❌ ОШИБКА удаления: {type(e).__name__}: {e}")
+        
         # Отправляем результат от имени бота (как если бы он сам крутил)
         sent_msg = await message.answer_dice(emoji=DiceEmoji.SLOT_MACHINE)
         dice_value = sent_msg.dice.value
@@ -273,16 +283,17 @@ async def remove_manual_slot(message: types.Message):
         result_text = f"🎉 ПОБЕДА! +{won_fish} фишек!" if won_fish > 0 else "😔 Проигрыш."
         await message.answer(
             f"{result_text}\n"
-            f"🎲 Выпало: {dice_value}\n"
             f"💰 Баланс: {user['balance']} фишек | Бесплатных попыток сегодня: {user['free_attempts']}",
             reply_markup=get_main_keyboard()
         )
     else:
         # Нет попыток – удаляем сообщение и уведомляем
         try:
-            await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-        except TelegramBadRequest:
-            pass
+            await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
+            print(f"✅ Сообщение {message.message_id} УСПЕШНО удалено в {chat_type} (нет попыток)")
+        except Exception as e:
+            print(f"❌ ОШИБКА удаления: {type(e).__name__}: {e}")
+        
         await message.answer(
             "❌ Ты отправил эмодзи слота, но у тебя нет бесплатных попыток и нет фишек.\n"
             "Используй кнопку, чтобы крутить, когда будут попытки.",
