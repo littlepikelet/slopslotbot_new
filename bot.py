@@ -1,4 +1,4 @@
-# force rebuild v6
+# force rebuild v7
 import asyncio
 import os
 from datetime import datetime
@@ -253,7 +253,7 @@ async def remove_manual_slot(message: types.Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
     user = await get_user(user_id, message.chat.id)
-    user = await update_user_day(user_id, user)
+    user = await update_user_day(user_id, chat_id, user)
 
     # Пытаемся списать попытку (если есть)
     success, user = await deduct_attempt(user_id, user)
