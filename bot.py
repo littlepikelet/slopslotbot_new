@@ -1,4 +1,4 @@
-# force rebuild v13
+# force rebuild v14
 import asyncio
 import os
 from datetime import datetime
@@ -286,7 +286,7 @@ async def remove_manual_slot(message: types.Message):
             f"💰 Баланс: {user['balance']} фишек | Бесплатных попыток сегодня: {user['free_attempts']}",
             reply_markup=get_main_keyboard()
         )
-        else:
+    else:
         # Нет попыток – просто удаляем сообщение и молчим
         try:
             await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
