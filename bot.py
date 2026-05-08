@@ -1,4 +1,4 @@
-# force rebuild v8
+# force rebuild v9
 import asyncio
 import os
 from datetime import datetime
@@ -228,7 +228,7 @@ async def show_stats(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     user_name = callback.from_user.first_name  # <-- ДОБАВИТЬ ЭТУ СТРОКУ
     user = await get_user(user_id, callback.message.chat.id)
-    user = await update_user_day(user_id, user)
+    user = await update_user_day(user_id, callback.message.chat.id, user)
 
     total_games = user["total_games"]
     win_rate = (user["total_wins"] / total_games * 100) if total_games > 0 else 0
@@ -256,7 +256,7 @@ async def remove_manual_slot(message: types.Message):
     user = await update_user_day(user_id, chat_id, user)
 
     # Пытаемся списать попытку (если есть)
-    success, user = await deduct_attempt(user_id, user)
+    success, user = await deduct_attempt(user_id, chat_id, user)
     if success:
         # Если списали удачно – обрабатываем как обычный спин
         # НО сообщение всё равно удалим, чтобы не засорять чат
@@ -267,8 +267,8 @@ async def remove_manual_slot(message: types.Message):
         # Отправляем результат от имени бота (как если бы он сам крутил)
         sent_msg = await message.answer_dice(emoji=DiceEmoji.SLOT_MACHINE)
         dice_value = sent_msg.dice.value
-        await update_total_games(user_id)
-        user, won_fish = await apply_win(user_id, user, dice_value)
+        await update_total_games(user_id, chat_id)
+        user, won_fish = await apply_win(user_id, chat_id, user, dice_value)
 
         result_text = f"🎉 ПОБЕДА! +{won_fish} фишек!" if won_fish > 0 else "😔 Проигрыш."
         await message.answer(
