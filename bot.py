@@ -1,4 +1,4 @@
-# force rebuild v12
+# force rebuild v13
 import asyncio
 import os
 from datetime import datetime
@@ -226,7 +226,7 @@ async def spin_action(user_id: int, chat_id: int, source_message: types.Message,
 @dp.callback_query(lambda c: c.data == "stats")
 async def show_stats(callback: types.CallbackQuery):
     user_id = callback.from_user.id
-    user_name = callback.from_user.first_name  # <-- ДОБАВИТЬ ЭТУ СТРОКУ
+    user_name = callback.from_user.first_name
     user = await get_user(user_id, callback.message.chat.id)
     user = await update_user_day(user_id, callback.message.chat.id, user)
 
@@ -234,7 +234,7 @@ async def show_stats(callback: types.CallbackQuery):
     win_rate = (user["total_wins"] / total_games * 100) if total_games > 0 else 0
 
     await callback.message.answer(
-        f"📊 <b>Статистика для {user_name}</b>\n"  # <-- ИЗМЕНИТЬ ЭТУ СТРОКУ
+        f"📊 <b>Статистика для {user_name}</b>\n"
         f"🎰 Всего игр: {total_games}\n"
         f"🏆 Побед: {user['total_wins']}\n"
         f"⭐ Процент побед: {win_rate:.1f}%\n"
@@ -280,7 +280,7 @@ async def remove_manual_slot(message: types.Message):
         await update_total_games(user_id, chat_id)
         user, won_fish = await apply_win(user_id, chat_id, user, dice_value)
 
-        result_text = f"🎉 ПОБЕДА! +{won_fish} фишек!" if won_fish > 0 else "😔 Проигрыш."
+        result_text = f"🎉 {user_name}, ПОБЕДА! +{won_fish} фишек!" if won_fish > 0 else f"😔 {user_name}, проигрыш. Попробуй ещё."
         await message.answer(
             f"{result_text}\n"
             f"💰 Баланс: {user['balance']} фишек | Бесплатных попыток сегодня: {user['free_attempts']}",
