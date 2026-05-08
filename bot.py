@@ -261,7 +261,7 @@ async def remove_manual_slot(message: types.Message):
         # Если списали удачно – обрабатываем как обычный спин
         # НО сообщение всё равно удалим, чтобы не засорять чат
         try:
-            await message.delete()
+            await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
         except TelegramBadRequest:
             pass
         # Отправляем результат от имени бота (как если бы он сам крутил)
@@ -280,7 +280,7 @@ async def remove_manual_slot(message: types.Message):
     else:
         # Нет попыток – удаляем сообщение и уведомляем
         try:
-            await message.delete()
+            await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
         except TelegramBadRequest:
             pass
         await message.answer(
