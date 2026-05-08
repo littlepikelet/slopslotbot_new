@@ -1,4 +1,4 @@
-# force rebuild v11
+# force rebuild v12
 import asyncio
 import os
 from datetime import datetime
@@ -286,19 +286,13 @@ async def remove_manual_slot(message: types.Message):
             f"💰 Баланс: {user['balance']} фишек | Бесплатных попыток сегодня: {user['free_attempts']}",
             reply_markup=get_main_keyboard()
         )
-    else:
-        # Нет попыток – удаляем сообщение и уведомляем
+        else:
+        # Нет попыток – просто удаляем сообщение и молчим
         try:
             await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
-            print(f"✅ Сообщение {message.message_id} УСПЕШНО удалено в {chat_type} (нет попыток)")
+            print(f"🗑️ Удалено сообщение {message.message_id} (нет попыток)")
         except Exception as e:
             print(f"❌ ОШИБКА удаления: {type(e).__name__}: {e}")
-        
-        await message.answer(
-            "❌ Ты отправил эмодзи слота, но у тебя нет бесплатных попыток и нет фишек.\n"
-            "Используй кнопку, чтобы крутить, когда будут попытки.",
-            reply_markup=get_main_keyboard()
-        )
 
 # ---------- ЗАПУСК ----------
 async def main():
