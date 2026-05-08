@@ -187,11 +187,13 @@ async def cmd_start(message: types.Message):
 
 @dp.message(Command("spin"))
 async def cmd_spin(message: types.Message):
-    await spin_action(message.from_user.id, message.chat.id, message)
+    user_name = message.from_user.first_name
+    await spin_action(message.from_user.id, message.chat.id, message, user_name)
 
 @dp.callback_query(lambda c: c.data == "spin")
 async def callback_spin(callback: types.CallbackQuery):
-    await spin_action(callback.from_user.id, callback.message.chat.id, callback.message)
+    user_name = callback.from_user.first_name
+    await spin_action(callback.from_user.id, callback.message.chat.id, callback.message, user_name)
     await callback.answer()
 
 async def spin_action(user_id: int, chat_id: int, source_message: types.Message, user_name: str = None):
