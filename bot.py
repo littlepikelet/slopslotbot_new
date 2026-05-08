@@ -1,4 +1,4 @@
-# force rebuild v15
+# force rebuild v16
 import asyncio
 import os
 from datetime import datetime
@@ -252,9 +252,9 @@ async def remove_manual_slot(message: types.Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
     chat_type = "личный чат" if chat_id > 0 else "группа"
-    username = message.from_user.username or message.from_user.first_name
+    user_name = message.from_user.user_name or message.from_user.first_name
     
-    print(f"🔍 Получен dice от {username} (id:{user_id}) в {chat_type}")
+    print(f"🔍 Получен dice от {user_name} (id:{user_id}) в {chat_type}")
     print(f"   dice value: {message.dice.value}")
     
     user = await get_user(user_id, chat_id)
@@ -278,7 +278,7 @@ async def remove_manual_slot(message: types.Message):
         await update_total_games(user_id, chat_id)
         user, won_fish = await apply_win(user_id, chat_id, user, dice_value)
 
-        result_text = f"🎉 {username}, ПОБЕДА! +{won_fish} фишек!" if won_fish > 0 else f"😔 {username}, проигрыш. Попробуй ещё."
+        result_text = f"🎉 {user_name}, ПОБЕДА! +{won_fish} фишек!" if won_fish > 0 else f"😔 {user_name}, проигрыш. Попробуй ещё."
         await message.answer(
             f"{result_text}\n"
             f"💰 Баланс: {user['balance']} фишек | Бесплатных попыток сегодня: {user['free_attempts']}",
